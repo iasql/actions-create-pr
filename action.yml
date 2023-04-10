@@ -1,0 +1,44 @@
+name: 'create-pr'
+description: 'Create a PR on the repository with the changes are going to be applied in IaSQL database'
+inputs:
+  connection-string:
+    description: 'Connection string for the IaSQL database'
+    required: true
+  pr-title:
+    description: 'Title for the PR'
+    required: true
+  pr-description:
+    description: 'Description for the changes that this PR will try to make'
+    required: false
+outputs:
+  pr-link:
+    description: 'URL to the PR'
+    value: ${{ steps.cpr.outputs.pull-request-url }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Create markdown file
+      id: create-markdown
+      run: |
+        PR=$(psql "$CON_STR" -AXqtc "SELECT * FROM iasql_create_review('$PR_TITLE', '$PR_DESCRIPTION');")
+        mkdir -p transactions
+        cd transactions
+        echo "$PR" > "$PR_TITLE.md"
+        echo 'pr<<EOF' >> $GITHUB_OUTPUT
+        echo "$PR" >> $GITHUB_OUTPUT
+        echo 'EOF' >> $GITHUB_OUTPUT
+      env:
+        CON_STR: ${{ inputs.connection-string }}
+        PR_TITLE: ${{ inputs.pr-title }}
+        PR_DESCRIPTION: ${{ inputs.pr-description }}
+    - name: Create Pull Request
+      id: cpr
+      uses: peter-evans/create-pull-request@v4
+      with:
+        commit-message: ${{ inputs.pr-title }}
+        delete-branch: false
+        title: ${{ inputs.pr-title }}
+        body: ${{ steps.create-markdown.outputs.pr }}
+        branch: iasql/code-review
+        branch-suffix: timestamp
+        base: 'main'
