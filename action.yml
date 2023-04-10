@@ -1,4 +1,4 @@
-name: 'create-pr'
+name: 'iasql-create-pr'
 description: 'Create a PR on the repository with the changes are going to be applied in IaSQL database'
 inputs:
   connection-string:
